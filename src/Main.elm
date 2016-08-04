@@ -1,5 +1,4 @@
 -- TODO: remove debug logs
--- TODO: display a solution after losing
 
 port module Main exposing (..)
 
@@ -15,6 +14,7 @@ import Http
 import Json.Decode as Json
 import List
 import Random
+import Random.Extra
 import String exposing (lines, uncons)
 import Task
 
@@ -52,7 +52,8 @@ type State
   = Loading
   | Ready
   | Playing GameData
-  | GameOver Bool
+  | Won
+  | GameOver String
 
 
 type alias GameData =
@@ -80,6 +81,7 @@ type Msg
   | Start
   | Randomized (Int, List String)
   | KeyPressed Char.KeyCode
+  | Solution (Maybe String)
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
@@ -107,13 +109,16 @@ update msg model =
             newGameData = handleChar gameData c
           in
             if List.all isJust <| Array.toList newGameData.solution then
-              ({ model | state = GameOver True }, Cmd.none)
+              ({ model | state = Won }, Cmd.none)
             else if newGameData.nbRemGuesses == 0 then
-              ({ model | state = GameOver False }, Cmd.none)
+              (model, Random.generate Solution <| Random.Extra.sample gameData.words)
             else
               ({ model | state = Playing newGameData }, Cmd.none)
         else
           (model, Cmd.none)
+
+    (Solution (Just s), _) ->
+      ({ model | state = GameOver s }, Cmd.none)
 
     _ ->
       (model, Cmd.none)
@@ -213,8 +218,15 @@ view model =
           , text <| toString <| gameData.nbRemGuesses
           , input [ onKeyPress KeyPressed, style [ ("opacity", "0") ] ] []
           ]
-        GameOver hasWon ->
-          [ text (if hasWon then "You won!" else "You lost!")
+        GameOver solution ->
+          [ text "Game over :("
+          , br [] []
+          , text <| "The correct word was \"" ++ solution ++ "\"."
+          , br [] []
+          , button [ onClick Start] [ text "Retry" ]
+          ]
+        Won ->
+          [ text "You won!"
           , br [] []
           , button [ onClick Start] [ text "Restart" ]
           ]
