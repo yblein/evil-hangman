@@ -1,4 +1,3 @@
--- TODO: move the data of the `playing` state into a record
 -- TODO: randomize the word list so that results are less predictible
 -- TODO: remove debug logs
 -- TODO: display a solution after losing
@@ -52,8 +51,16 @@ type alias Model =
 type State
   = Loading
   | Ready
-  | Playing (List String) (Array (Maybe Char)) (List Char) Int
+  | Playing GameData
   | GameOver Bool
+
+
+type alias GameData =
+  { words : List String
+  , solution : Array (Maybe Char)
+  , previousGuesses : List Char
+  , nbRemGuesses : Int
+  }
 
 
 init : (Model, Cmd Msg)
@@ -79,7 +86,7 @@ update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case (msg, model.state) of
     (FetchSucceed contents, _) ->
-      (Model (List.sortBy String.length <| lines contents) Ready, Cmd.none)
+      (Model (lines contents) Ready, Cmd.none)
 
     (Start, _) ->
       (model, Random.generate NewNbLetters (Random.int minLetters maxLetters))
@@ -87,21 +94,20 @@ update msg model =
     (NewNbLetters n, _) ->
       (start model n, focus "input")
 
-    (KeyPressed keyCode, Playing currentWords currentSolution prevGuesses remGuesses) ->
+    (KeyPressed keyCode, Playing gameData) ->
       let
         c = Char.toLower <| Char.fromCode keyCode
       in
-        if Char.isLower c && not (List.member c prevGuesses) then
+        if Char.isLower c && not (List.member c gameData.previousGuesses) then
           let
-            (newWords, newSolution) = handleChar currentWords currentSolution c
-            newRemGuesses = if newSolution /= currentSolution then remGuesses else remGuesses - 1
+            newGameData = handleChar gameData c
           in
-            if List.all isJust <| Array.toList newSolution then
+            if List.all isJust <| Array.toList newGameData.solution then
               ({ model | state = GameOver True }, Cmd.none)
-            else if newRemGuesses == 0 then
+            else if newGameData.nbRemGuesses == 0 then
               ({ model | state = GameOver False }, Cmd.none)
             else
-              ({ model | state = Playing newWords newSolution (c :: prevGuesses) newRemGuesses }, Cmd.none)
+              ({ model | state = Playing newGameData }, Cmd.none)
         else
           (model, Cmd.none)
 
@@ -109,55 +115,42 @@ update msg model =
       (model, Cmd.none)
 
 
-isJust m =
-  case m of
-    Nothing -> False
-    Just _ -> True
-
-
 start : Model -> Int -> Model
 start model nbLetters =
   let
     initialWords = List.filter (\w -> String.length w == nbLetters) model.dictionnary
     initialSolution = Array.repeat nbLetters Nothing
+    gameData = GameData initialWords initialSolution [] nbGuesses
   in
-    { model | state = Playing initialWords initialSolution [] nbGuesses }
+    { model | state = Playing gameData }
 
 
-handleChar : List String -> Array (Maybe Char) -> Char -> (List String, Array (Maybe Char))
-handleChar words currentSolution c =
-  let
-    insertWord w families =
+handleChar : GameData -> Char -> GameData
+handleChar gameData char =
+  case minimumBy minInformation <| log "families" (computeWordFamilies gameData.words char) of
+    Nothing -> gameData
+    Just (indexes, newWords) ->
       let
-        idxs = indexes c w
+        newSolution = updateSolution indexes char gameData.solution
+        correct = newSolution /= gameData.solution
+        newNbRemGuesses = gameData.nbRemGuesses - (if correct then 0 else 1)
+        newPreviousGuesses = char :: gameData.previousGuesses
       in
-        case Dict.get idxs families of
-          Just f -> Dict.insert idxs (w :: f) families
-          Nothing -> Dict.insert idxs [w] families
-    families = List.foldl insertWord Dict.empty words
-    result = Dict.toList (log "families" families) |> List.sortWith minInformation |> List.head
-    updateSolution idxs i mc = if List.member i idxs then Just c else mc
-  in
-    case result of
-      Nothing -> ([], currentSolution)
-      Just (idxs, newWords) -> (newWords, Array.indexedMap (updateSolution idxs) currentSolution)
+        GameData newWords newSolution newPreviousGuesses newNbRemGuesses
 
 
-{-| Returns the list of occurence indexes of a char in a given string.
--}
-indexes : Char -> String -> List Int
-indexes c s =
+computeWordFamilies : List String -> Char -> List (List Int, List String)
+computeWordFamilies words char =
   let
-    rec s i =
-      case uncons s of
-        Nothing -> []
-        Just (x, xs) ->
-          if x == c then
-            i :: rec xs (i + 1)
-          else
-            rec xs (i + 1)
+    insertWord word families =
+      let
+        indexes = String.indexes (String.fromChar char) word
+      in
+        case Dict.get indexes families of
+          Just f -> Dict.insert indexes (word :: f) families
+          Nothing -> Dict.insert indexes [word] families
   in
-    rec s 0
+    Dict.toList <| List.foldl insertWord Dict.empty words
 
 
 {-| Order word families by minimum information, i.e., largest set of words and
@@ -169,6 +162,21 @@ minInformation (p1, f1) (p2, f2) =
     GT -> LT
     LT -> GT
     EQ -> compare (List.length p1) (List.length p2)
+
+
+updateSolution : List Int -> Char -> Array (Maybe Char) -> Array (Maybe Char)
+updateSolution indexes char =
+  Array.indexedMap <| \i mc -> if List.member i indexes then Just char else mc
+
+
+minimumBy : (a -> a -> Order) -> List a -> Maybe a
+minimumBy f = List.sortWith f >> List.head
+
+
+isJust m =
+  case m of
+    Nothing -> False
+    Just _ -> True
 
 
 
@@ -183,12 +191,12 @@ view model =
       (case model.state of
         Loading -> [ text "Loading..." ]
         Ready -> [ button [ onClick Start] [ text "Start" ] ]
-        Playing _ currentSolution prevGuesses remGuesses ->
-          [ div [] (viewCurrentSolution currentSolution)
-          , s [] (List.map (text << String.fromChar) <| List.reverse prevGuesses)
+        Playing gameData ->
+          [ div [] (viewCurrentSolution gameData.solution)
+          , s [] (List.map (text << String.fromChar) <| List.reverse gameData.previousGuesses)
           , br [] []
           , text "Remaning guesses: "
-          , text <| toString <| remGuesses
+          , text <| toString <| gameData.nbRemGuesses
           , input [ onKeyPress KeyPressed, style [ ("opacity", "0") ] ] []
           ]
         GameOver hasWon ->
@@ -196,11 +204,6 @@ view model =
           , br [] []
           , button [ onClick Start] [ text "Restart" ]
           ]
-      )
-    , text <| String.join " "
-      (case model.state of
-        Playing currentWords _ _ _ -> [] -- currentWords
-        _ -> []
       )
     ]
 
