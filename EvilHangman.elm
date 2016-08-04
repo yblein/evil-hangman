@@ -252,4 +252,4 @@ failedAttemps gameData =
 
 onKeyPress : (Int -> msg) -> Attribute msg
 onKeyPress tagger =
-  on "keypress" (Json.map tagger keyCode)
+  on "keyup" (Json.map tagger keyCode)
