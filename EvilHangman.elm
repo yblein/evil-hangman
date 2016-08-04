@@ -1,6 +1,6 @@
 -- TODO: remove debug logs
 
-port module Main exposing (..)
+port module EvilHangman exposing (..)
 
 import Array exposing (Array)
 import Char
