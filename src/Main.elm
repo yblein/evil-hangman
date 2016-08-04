@@ -21,6 +21,7 @@ import Task
 
 
 
+main : Program Never
 main =
   App.program
     { init = init
@@ -173,6 +174,7 @@ minimumBy : (a -> a -> Order) -> List a -> Maybe a
 minimumBy f = List.sortWith f >> List.head
 
 
+isJust : Maybe a -> Bool
 isJust m =
   case m of
     Nothing -> False
