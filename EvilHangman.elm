@@ -1,10 +1,8 @@
--- TODO: remove debug logs
-
 port module EvilHangman exposing (..)
+
 
 import Array exposing (Array)
 import Char
-import Debug exposing (..)
 import Dict exposing (Dict)
 import Html exposing (..)
 import Html.App as App
@@ -136,7 +134,7 @@ start model nbLetters =
 
 handleChar : GameData -> Char -> GameData
 handleChar gameData char =
-  case minimumBy minInformation <| log "families" (computeWordFamilies gameData.words char) of
+  case minimumBy minInformation <| computeWordFamilies gameData.words char of
     Nothing -> gameData
     Just (indexes, newWords) ->
       let
