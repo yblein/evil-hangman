@@ -5,6 +5,7 @@ body {
 	text-align: center;
 	max-width: 900px;
 	margin: 0px auto;
+	font-family: sans-serif;
 }
 
 #wrapper {
@@ -19,6 +20,7 @@ h1 {
 
 button {
 	font-size: inherit;
+	font-family: inherit;
 	background: white;
 	cursor: pointer;
 	color: #005b89;
