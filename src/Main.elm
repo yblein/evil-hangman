@@ -1,7 +1,9 @@
--- TODO: focus input field automatically when starting the game (see TodoMVC)
 -- TODO: move the data of the `playing` state into a record
 -- TODO: randomize the word list so that results are less predictible
 -- TODO: remove debug logs
+-- TODO: display a solution after losing
+
+port module Main exposing (..)
 
 import Array exposing (Array)
 import Char
@@ -27,6 +29,9 @@ main =
     , update = update
     , subscriptions = always Sub.none
     }
+
+
+port focus : String -> Cmd msg
 
 
 
@@ -80,7 +85,7 @@ update msg model =
       (model, Random.generate NewNbLetters (Random.int minLetters maxLetters))
 
     (NewNbLetters n, _) ->
-      (start model n, Cmd.none)
+      (start model n, focus "input")
 
     (KeyPressed keyCode, Playing currentWords currentSolution prevGuesses remGuesses) ->
       let
@@ -180,17 +185,18 @@ view model =
         Ready -> [ button [ onClick Start] [ text "Start" ] ]
         Playing _ currentSolution prevGuesses remGuesses ->
           [ div [] (viewCurrentSolution currentSolution)
-          , s [] (List.map (String.fromChar >> text) <| List.reverse prevGuesses)
+          , s [] (List.map (text << String.fromChar) <| List.reverse prevGuesses)
           , br [] []
           , text "Remaning guesses: "
-          , text <| toString <| remGuesses ]
+          , text <| toString <| remGuesses
+          , input [ onKeyPress KeyPressed, style [ ("opacity", "0") ] ] []
+          ]
         GameOver hasWon ->
           [ text (if hasWon then "You won!" else "You lost!")
           , br [] []
           , button [ onClick Start] [ text "Restart" ]
           ]
       )
-    , input [ onKeyPress KeyPressed, style [ ("opacity", ".5") ] ] []
     , text <| String.join " "
       (case model.state of
         Playing currentWords _ _ _ -> [] -- currentWords
