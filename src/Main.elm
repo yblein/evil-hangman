@@ -1,4 +1,3 @@
--- TODO: randomize the word list so that results are less predictible
 -- TODO: remove debug logs
 -- TODO: display a solution after losing
 
@@ -79,7 +78,7 @@ type Msg
   = FetchSucceed String
   | FetchFail Http.Error
   | Start
-  | NewNbLetters Int
+  | Randomized (Int, List String)
   | KeyPressed Char.KeyCode
 
 
@@ -90,10 +89,14 @@ update msg model =
       (Model (lines contents) Ready, Cmd.none)
 
     (Start, _) ->
-      (model, Random.generate NewNbLetters (Random.int minLetters maxLetters))
+      let
+        genNbLetters = Random.int minLetters maxLetters
+        genDict = shuffle model.dictionnary
+      in
+        (model, Random.generate Randomized <| Random.pair genNbLetters genDict)
 
-    (NewNbLetters n, _) ->
-      (start model n, focus "input")
+    (Randomized (n, dict), _) ->
+      (start { model | dictionnary = dict } n, focus "input")
 
     (KeyPressed keyCode, Playing gameData) ->
       let
@@ -179,6 +182,15 @@ isJust m =
   case m of
     Nothing -> False
     Just _ -> True
+
+
+shuffle : List a -> Random.Generator (List a)
+shuffle xs =
+  let
+    genFloats = Random.list (List.length xs) (Random.float 0 1)
+    sortBy fs = List.map2 (,) fs xs |> List.sortBy fst |> List.map snd
+  in
+    Random.map sortBy genFloats
 
 
 
