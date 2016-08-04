@@ -65,7 +65,7 @@ type alias GameData =
 init : (Model, Cmd Msg)
 init =
   ( Model [] Loading
-  , Task.perform FetchFail FetchSucceed <| Http.getString "/static/dict.txt"
+  , Task.perform FetchFail FetchSucceed <| Http.getString "dict.txt"
   )
 
 
