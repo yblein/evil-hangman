@@ -204,45 +204,52 @@ shuffle xs =
 
 view : Model -> Html Msg
 view model =
-  div []
+  div [ id "wrapper" ]
     [ h1 [] [text "Evil Hangman"]
+    , p [] [text "This is an implementation of the classic Hangman game. It features only simple and common english words like \"boat\" or \"forest\"."]
     , div []
-      (case model.state of
-        Loading -> [ text "Loading..." ]
-        Ready -> [ button [ onClick Start] [ text "Start" ] ]
-        Playing gameData ->
-          [ div [] (viewCurrentSolution gameData.solution)
-          , s [] (List.map (text << String.fromChar) <| List.reverse gameData.previousGuesses)
-          , br [] []
-          , text "Remaning guesses: "
-          , text <| toString <| gameData.nbRemGuesses
-          , input [ onKeyPress KeyPressed, style [ ("opacity", "0") ] ] []
-          ]
-        GameOver solution ->
-          [ text "Game over :("
-          , br [] []
-          , text <| "The correct word was \"" ++ solution ++ "\"."
-          , br [] []
-          , button [ onClick Start] [ text "Retry" ]
-          ]
-        Won ->
-          [ text "You won!"
-          , br [] []
-          , button [ onClick Start] [ text "Restart" ]
-          ]
-      )
+        (case model.state of
+          Loading -> [ text "Loading..." ]
+          Ready -> [ button [ onClick Start ] [ text "Play" ] ]
+          Playing gameData ->
+            [ p [] [ viewCurrentSolution gameData.solution ]
+            , p [] [ s [] [ makeCharList <| List.reverse <| failedAttemps gameData ] ]
+            , p []
+              [ text "You have "
+              , text <| toString <| gameData.nbRemGuesses
+              , text <| " remaining guess" ++ (if gameData.nbRemGuesses == 1 then "" else "es") ++ "."
+              ]
+            , input [ onKeyPress KeyPressed, style [ ("opacity", "0") ] ] []
+            ]
+          GameOver solution ->
+            [ p [] [ text "Game over >:)" ]
+            , p [] [ text <| "The correct word was \"" ++ solution ++ "\"." ]
+            , button [ onClick Start] [ text "Replay" ]
+            ]
+          Won ->
+            [ p [] [ text "You won!" ]
+            , button [ onClick Start] [ text "Replay" ]
+            ]
+        )
     ]
 
 
-viewCurrentSolution : Array (Maybe Char) -> List (Html Msg)
-viewCurrentSolution s =
+viewCurrentSolution : Array (Maybe Char) -> Html Msg
+viewCurrentSolution =
+  makeCharList << List.map (Maybe.withDefault '_') << Array.toList
+
+
+makeCharList : List Char -> Html Msg
+makeCharList =
+  ul [] << List.map (\s -> li [] [ text <| String.fromChar s ])
+
+
+failedAttemps : GameData -> List Char
+failedAttemps gameData =
   let
-    viewMaybeChar mc =
-      case mc of
-        Just c -> text <| String.fromChar c
-        Nothing -> text "-"
+    correctAttemps = Array.toList gameData.solution
   in
-    Array.toList s |> List.map viewMaybeChar
+    List.filter (\c -> not <| List.member (Just c) correctAttemps) gameData.previousGuesses
 
 
 onKeyPress : (Int -> msg) -> Attribute msg

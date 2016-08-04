@@ -1,0 +1,41 @@
+body {
+	background-color: #005b89;
+	color: white;
+	font-size: 1.3em;
+	text-align: center;
+	max-width: 900px;
+	margin: 0px auto;
+}
+
+#wrapper {
+	margin: 8px;
+}
+
+h1 {
+	font-weight: 100;
+	text-transform: uppercase;
+}
+
+button {
+	font-size: inherit;
+	background: white;
+	cursor: pointer;
+	color: #005b89;
+	border: solid 1px white;
+	border-radius: 5px;
+	padding: 18px 10px;
+	width: 180px;
+	margin-top: 40px;
+}
+
+ul {
+	list-style-type: none;
+	padding: 0;
+	margin-top: 40px;
+	margin-bottom: 40px;
+}
+
+ul li {
+	display: inline;
+	padding: 0 10px;
+}
