@@ -207,7 +207,7 @@ view : Model -> Html Msg
 view model =
   div [ id "wrapper" ]
     [ h1 [] [text "Evil Hangman"]
-    , p [] [text "This is an implementation of the classic Hangman game. It features only simple and common english words like \"boat\" or \"forest\"."]
+    , p [] [text "This is an implementation of the classic Hangman game. It features only simple and common english words like \"boat\" or \"forest\", it should be fairly easy."]
     , div []
         (case model.state of
           Loading -> [ text "Loading..." ]
