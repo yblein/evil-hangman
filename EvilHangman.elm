@@ -33,8 +33,8 @@ main =
 -- MODEL
 
 
-minLetters = 3
-maxLetters = 8
+minLetters = 4
+maxLetters = 9
 nbGuesses = 10
 
 
