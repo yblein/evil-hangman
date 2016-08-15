@@ -4,6 +4,7 @@ port module EvilHangman exposing (..)
 import Array exposing (Array)
 import Char
 import Dict exposing (Dict)
+import Dom exposing (focus)
 import Html exposing (..)
 import Html.App as App
 import Html.Attributes exposing (..)
@@ -26,9 +27,6 @@ main =
     , update = update
     , subscriptions = always Sub.none
     }
-
-
-port focus : String -> Cmd msg
 
 
 
@@ -80,6 +78,7 @@ type Msg
   | Randomized (Int, List String)
   | KeyPressed Char.KeyCode
   | Solution (Maybe String)
+  | NoOp
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
@@ -96,7 +95,7 @@ update msg model =
         (model, Random.generate Randomized <| Random.pair genNbLetters genDict)
 
     (Randomized (n, dict), _) ->
-      (start { model | dictionnary = dict } n, focus "input")
+      (start { model | dictionnary = dict } n, Task.perform noOp noOp <| focus "input")
 
     (KeyPressed keyCode, Playing gameData) ->
       let
@@ -196,6 +195,10 @@ shuffle xs =
     Random.map sortBy genFloats
 
 
+noOp : a -> Msg
+noOp = always NoOp
+
+
 
 -- VIEW
 
@@ -217,7 +220,7 @@ view model =
               , text <| toString <| gameData.nbRemGuesses
               , text <| " remaining guess" ++ (if gameData.nbRemGuesses == 1 then "" else "es") ++ "."
               ]
-            , input [ onKeyPress KeyPressed, style [ ("opacity", "0") ] ] []
+            , input [ id "input", onKeyPress KeyPressed, style [ ("opacity", "0") ] ] []
             ]
           GameOver solution ->
             [ p [] [ text "Game over >:)" ]
